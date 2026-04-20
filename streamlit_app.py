@@ -17,7 +17,8 @@ st.markdown("""
 <style>
     .main-header { font-size: 2.5rem; font-weight: 600; color: #1f77b4; }
     .hero-card { background: linear-gradient(135deg, #1f77b4 0%, #2C5282 100%); border-radius: 16px; padding: 2rem; color: white; text-align: center; }
-    .hero-ticker { font-size: 4rem; font-weight: 800; }
+    .hero-ticker { font-size: 4rem; font-weight: 800; color: white; }
+    .hero-score { font-size: 2rem; font-weight: 600; color: white; }
     .return-positive { color: #28a745; font-weight: 600; }
     .return-negative { color: #dc3545; font-weight: 600; }
 </style>
@@ -41,18 +42,16 @@ def load_latest_results():
         st.error(f"Failed to load data: {e}")
         return None
 
-def return_badge(ret):
-    if ret >= 0:
-        return f'<span class="return-positive">+{ret*100:.2f}%</span>'
-    return f'<span class="return-negative">{ret*100:.2f}%</span>'
-
 def display_hero_card(ticker: str, exp_ret: float, score: float, var95: float, es95: float):
+    ret_str = f"{exp_ret*100:+.2f}%"
     st.markdown(f"""
     <div class="hero-card">
         <div style="font-size: 1.2rem; opacity: 0.8;">🍇 TOP PICK (Highest Expected Return)</div>
         <div class="hero-ticker">{ticker}</div>
-        <div class="hero-score">Exp Return: {return_badge(exp_ret)}</div>
-        <div>Score: {score:.4f} | VaR 95%: {var95*100:.2f}% | ES 95%: {es95*100:.2f}%</div>
+        <div class="hero-score">Exp Return: {ret_str}</div>
+        <div style="margin-top: 1rem; color: rgba(255,255,255,0.9);">
+            Score: {score:.4f} | VaR 95%: {var95*100:.2f}% | ES 95%: {es95*100:.2f}%
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -105,7 +104,7 @@ with tab1:
             if key in universes_data:
                 picks = top_picks.get(key, [])
                 if picks:
-                    top = picks[0]  # Already sorted by expected return
+                    top = picks[0]
                     st.markdown("### 🏆 Top Pick for Tomorrow")
                     display_hero_card(top['ticker'], top['expected_return'],
                                       top['combined_score'], top['var_95'], top['es_95'])
