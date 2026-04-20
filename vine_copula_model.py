@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
+import config  # <-- Add this import
 
 try:
     import vinecopulib as vc
