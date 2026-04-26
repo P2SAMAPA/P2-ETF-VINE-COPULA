@@ -10,4 +10,9 @@ class USMarketCalendar:
     def next_trading_day(self, date=None):
         if date is None: date = pd.Timestamp.today().normalize()
         else: date = pd.Timestamp(date).normalize()
+        if self.is_trading_day(date): return date
         return date + self.trading_day
+    def is_trading_day(self, date=None):
+        if date is None: date = pd.Timestamp.today().normalize()
+        else: date = pd.Timestamp(date).normalize()
+        return (date.weekday() < 5) and (date not in self.holidays)
