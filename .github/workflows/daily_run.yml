@@ -1,12 +1,12 @@
-name: Daily Vine Copula Run
+name: Daily T‑COPULA Run
 
 on:
   schedule:
-    - cron: '0 23 * * 1-5'
+    - cron: '0 13 * * 1-5'
   workflow_dispatch:
 
 jobs:
-  run-vine:
+  run-tcopula:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
