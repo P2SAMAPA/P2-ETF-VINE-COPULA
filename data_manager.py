@@ -5,7 +5,6 @@ Data loading and preprocessing for T‑COPULA engine.
 import pandas as pd
 import numpy as np
 from huggingface_hub import hf_hub_download
-from sklearn.preprocessing import StandardScaler
 import config
 
 def load_master_data() -> pd.DataFrame:
@@ -18,13 +17,14 @@ def load_master_data() -> pd.DataFrame:
         cache_dir="./hf_cache"
     )
     df = pd.read_parquet(file_path)
+    # The parquet uses a DatetimeIndex
     if isinstance(df.index, pd.DatetimeIndex):
         df = df.reset_index().rename(columns={'index': 'Date'})
     df['Date'] = pd.to_datetime(df['Date'])
     return df
 
 def prepare_returns_matrix(df_wide: pd.DataFrame, tickers: list) -> pd.DataFrame:
-    """Prepare wide‑format log returns."""
+    """Prepare wide-format log returns."""
     available = [t for t in tickers if t in df_wide.columns]
     df_long = pd.melt(
         df_wide, id_vars=['Date'], value_vars=available,
@@ -38,7 +38,7 @@ def prepare_returns_matrix(df_wide: pd.DataFrame, tickers: list) -> pd.DataFrame
     return df_long.pivot(index='Date', columns='ticker', values='log_return')[available].dropna()
 
 def prepare_macro_features(df_wide: pd.DataFrame) -> pd.DataFrame:
-    """Extract macro columns and forward‑fill."""
+    """Extract macro columns and forward-fill."""
     macro_cols = [c for c in config.MACRO_COLS if c in df_wide.columns]
     macro_df = df_wide[['Date'] + macro_cols].copy()
     macro_df = macro_df.set_index('Date').ffill().dropna()
