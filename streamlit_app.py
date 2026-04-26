@@ -1,7 +1,3 @@
-"""
-Streamlit Dashboard — T‑COPULA: Daily, Global, Shrinking tabs.
-"""
-
 import streamlit as st
 import pandas as pd
 from huggingface_hub import HfApi, hf_hub_download
@@ -18,6 +14,7 @@ st.markdown("""
     .hero-ticker { font-size: 4rem; font-weight: 800; }
     .metric-positive { color: #28a745; font-weight: 600; }
     .metric-negative { color: #dc3545; font-weight: 600; }
+    .ci-text { font-size: 0.9rem; opacity: 0.8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -43,6 +40,15 @@ def safe_pct(val):
     except:
         return "N/A"
 
+def safe_ci(metric_dict):
+    """Format VaR/ES with confidence interval."""
+    if not metric_dict:
+        return "N/A"
+    pt = metric_dict.get('point', 0)
+    lo = metric_dict.get('lower', pt)
+    hi = metric_dict.get('upper', pt)
+    return f"{pt*100:.2f}% [{lo*100:.2f}% – {hi*100:.2f}%]"
+
 def render_mode_tab(mode_data, mode_name):
     if not mode_data:
         st.warning(f"No {mode_name} data available.")
@@ -54,28 +60,42 @@ def render_mode_tab(mode_data, mode_name):
         ticker = p.get('ticker', 'N/A')
         raw_ret = p.get('expected_return_raw', 0)
         adj_score = p.get('t_copula_adj_score', 0)
-        es95 = p.get('es_95', 0)
+        es95 = p.get('es_95', {})
+        var95 = p.get('var_95', {})
         dof = p.get('dof', 'N/A')
         st.markdown(f"""
         <div class="hero-card">
             <div style="font-size: 1.2rem; opacity: 0.8;">📐 {mode_name} TOP PICK</div>
             <div class="hero-ticker">{ticker}</div>
             <div>Adj Score: {adj_score:.4f}</div>
-            <div>Raw Return: {safe_pct(raw_ret)} | ES₉₅: {safe_pct(es95)} | dof: {dof}</div>
+            <div>Raw Return: {safe_pct(raw_ret)} | ES₉₅: {safe_ci(es95)}</div>
+            <div class="ci-text">VaR₉₅: {safe_ci(var95)} | dof: {dof}</div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("### Top 3 Picks")
-        rows = [{"Ticker": p['ticker'], "Adj Score": f"{p.get('t_copula_adj_score',0):.4f}",
-                 "Raw Return": safe_pct(p.get('expected_return_raw',0)),
-                 "ES₉₅": safe_pct(p.get('es_95',0)),
-                 "dof": f"{p.get('dof','')}"} for p in top_picks]
+        rows = []
+        for p in top_picks:
+            rows.append({
+                "Ticker": p['ticker'],
+                "Adj Score": f"{p.get('t_copula_adj_score',0):.4f}",
+                "Raw Return": safe_pct(p.get('expected_return_raw',0)),
+                "ES₉₅": safe_ci(p.get('es_95')),
+                "VaR₉₅": safe_ci(p.get('var_95')),
+                "dof": f"{p.get('dof','')}"
+            })
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
         st.markdown("### All ETFs")
-        all_rows = [{"Ticker": t, "Adj Score": f"{d.get('t_copula_adj_score',0):.4f}",
-                     "Raw Return": safe_pct(d.get('expected_return_raw',0)),
-                     "ES₉₅": safe_pct(d.get('es_95',0))} for t, d in universes.items()]
+        all_rows = []
+        for t, d in universes.items():
+            all_rows.append({
+                "Ticker": t,
+                "Adj Score": f"{d.get('t_copula_adj_score',0):.4f}",
+                "Raw Return": safe_pct(d.get('expected_return_raw',0)),
+                "ES₉₅": safe_ci(d.get('es_95')),
+                "VaR₉₅": safe_ci(d.get('var_95'))
+            })
         df_all = pd.DataFrame(all_rows).sort_values("Adj Score", ascending=False)
         st.dataframe(df_all, use_container_width=True, hide_index=True)
 
@@ -106,7 +126,17 @@ if data:
     st.sidebar.markdown(f"**Run Date:** {data.get('run_date', 'Unknown')}")
 
 st.markdown('<div class="main-header">📐 P2Quant T‑COPULA</div>', unsafe_allow_html=True)
-st.markdown('<div>Student‑t Copula – Tail‑Dependence‑Aware ETF Ranking</div>', unsafe_allow_html=True)
+st.markdown('<div>Student‑t Copula – Tail‑Dependence‑Aware ETF Ranking with GARCH+Skew‑t Marginals</div>', unsafe_allow_html=True)
+
+with st.expander("📘 How It Works", expanded=False):
+    st.markdown("""
+    **T‑COPULA** fits a multivariate Student‑t copula to capture tail dependence.
+    - **Marginals:** GARCH(1,1) with skew‑t innovations (unless `arch` unavailable, then empirical).
+    - **Degrees of freedom** estimated from lower‑tail dependence coefficients.
+    - **Monte Carlo:** 100,000 draws from the t‑copula mapped to original return scale.
+    - **Risk metrics:** VaR₉₅ and ES₉₅ with bootstrap confidence intervals.
+    - **Scoring:** `Adj Score = Momentum × 252 − λ × |ES₉₅|`.
+    """)
 
 if data is None:
     st.warning("No data available.")
@@ -122,7 +152,9 @@ for tab, key in zip(tabs, keys):
         st.info(f"No data for {key}.")
         continue
     with tab:
-        sub_daily, sub_global, sub_shrink = st.tabs(["📅 Daily (504d)", "🌍 Global (2008‑YTD)", "🔄 Shrinking Consensus"])
+        sub_daily, sub_global, sub_shrink = st.tabs([
+            "📅 Daily (504d)", "🌍 Global (2008‑YTD)", "🔄 Shrinking Consensus"
+        ])
         with sub_daily:
             render_mode_tab(uni.get('daily'), "Daily")
         with sub_global:
