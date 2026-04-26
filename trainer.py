@@ -30,17 +30,19 @@ def compute_mode_results(returns, mode_name, mode_label):
         raw_ret = momentum.get(ticker, 0.0)
         copula_info = all_metrics.get(ticker, {})
         copula_score = copula_info.get('t_copula_score', 0.0)
-        es95 = copula_info.get('es_95', 0.0)
+        es95_dict = copula_info.get('es_95', {})
+        es95_point = es95_dict.get('point', 0.0)
 
         # T‑copula adjusted score: momentum minus tail penalty
-        tail_penalty = config.TAIL_ADJUSTMENT_LAMBDA * abs(min(es95, 0))
+        tail_penalty = config.TAIL_ADJUSTMENT_LAMBDA * abs(min(es95_point, 0))
         adj_score = raw_ret * 252 - tail_penalty
 
         universe_results[ticker] = {
             'ticker': ticker,
             'expected_return_raw': float(raw_ret),
             'copula_score': float(copula_score),
-            'es_95': float(es95),
+            'es_95': es95_dict,
+            'var_95': copula_info.get('var_95', {}),
             'dof': float(copula_info.get('dof', 0)),
             't_copula_adj_score': float(adj_score)
         }
@@ -78,7 +80,7 @@ def run_shrinking_windows(df_master, tickers):
         metrics = copula.compute_risk_metrics(sim)
 
         momentum = window_returns.iloc[-config.MOMENTUM_WINDOW:].mean().to_dict()
-        best_ticker = max(tickers, key=lambda t: momentum.get(t, 0) - abs(min(metrics.get(t, {}).get('es_95', 0), 0)))
+        best_ticker = max(tickers, key=lambda t: momentum.get(t, 0) - abs(min(metrics.get(t, {}).get('es_95', {}).get('point', 0), 0)))
 
         results.append({
             'window_start': start_year,
