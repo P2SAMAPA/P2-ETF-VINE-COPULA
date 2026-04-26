@@ -31,12 +31,20 @@ MACRO_COLS = ["VIX", "DXY", "T10Y2Y", "TBILL_3M"]
 # --- Copula Parameters ---
 DAILY_LOOKBACK = 504               # Days for daily training
 GLOBAL_TRAIN_START = "2008-01-01"  # Global training start
-ROLLING_WINDOW = 252               # Window for correlation estimation
 
 # --- Simulation ---
-N_SIMULATIONS = 50000              # Number of Monte Carlo draws
-TAIL_ADJUSTMENT_LAMBDA = 1.0       # Weight for ES95 penalty (increased for differentiation)
-RISK_FREE_RATE_ANNUAL = 0.02       # Annual risk‑free rate
+N_SIMULATIONS = 100000             # Increased for more precise risk metrics
+TAIL_ADJUSTMENT_LAMBDA = 1.0       # Weight for ES95 penalty
+RISK_FREE_RATE_ANNUAL = 0.02
+
+# --- Parametric Marginals ---
+USE_GARCH = True                   # Use GARCH(1,1) + skew‑t instead of empirical CDF
+GARCH_P = 1
+GARCH_Q = 1
+GARCH_DIST = "skewt"              # skew‑t distribution for GARCH residuals
+
+# --- Bootstrap ---
+BOOTSTRAP_SAMPLES = 1000           # Bootstrap resamples for VaR/ES confidence intervals
 
 # --- Conditional Expected Return ---
 MOMENTUM_WINDOW = 21               # Days for forward‑looking return signal
