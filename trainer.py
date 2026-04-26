@@ -65,8 +65,10 @@ def run_shrinking_windows(df_master, tickers):
     for start_year in config.SHRINKING_WINDOW_START_YEARS:
         start_date = pd.Timestamp(f"{start_year}-01-01")
         end_date = pd.Timestamp("2024-12-31")
-        mask = (df_master.index >= start_date) & (df_master.index <= end_date)
-        window_returns = df_master[mask][tickers]
+        # Filter using Date column
+        mask = (df_master['Date'] >= start_date) & (df_master['Date'] <= end_date)
+        window_df = df_master[mask]
+        window_returns = data_manager.prepare_returns_matrix(window_df, tickers)
         if len(window_returns) < config.MIN_OBSERVATIONS:
             continue
 
@@ -85,7 +87,6 @@ def run_shrinking_windows(df_master, tickers):
             'expected_return': float(momentum.get(best_ticker, 0))
         })
 
-    # Consensus
     if results:
         vote = {}
         for r in results:
@@ -93,22 +94,22 @@ def run_shrinking_windows(df_master, tickers):
             vote[t] = vote.get(t, 0) + 1
         pick = max(vote, key=vote.get)
         conviction = vote[pick] / len(results) * 100
-        consensus = {
+        return {
             'ticker': pick,
             'conviction': conviction,
             'num_windows': len(results),
             'num_pick_windows': vote[pick],
             'windows': results
         }
-        return consensus
     return None
 
 
 def run_t_copula():
     print(f"=== P2-ETF-T-COPULA Run: {config.TODAY} ===")
     df_master = data_manager.load_master_data()
-    df_master.index = pd.to_datetime(df_master.index)
-    df_master = df_master[df_master.index >= config.GLOBAL_TRAIN_START]
+    # Filter by date using the Date column
+    df_master['Date'] = pd.to_datetime(df_master['Date'])
+    df_master = df_master[df_master['Date'] >= config.GLOBAL_TRAIN_START]
 
     all_results = {}
 
