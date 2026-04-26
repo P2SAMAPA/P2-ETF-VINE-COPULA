@@ -1,5 +1,5 @@
 """
-Configuration for P2-ETF-VINE-COPULA engine.
+Configuration for P2-ETF-T-COPULA engine.
 """
 
 import os
@@ -8,8 +8,7 @@ from datetime import datetime
 # --- Hugging Face Repositories ---
 HF_DATA_REPO = "P2SAMAPA/fi-etf-macro-signal-master-data"
 HF_DATA_FILE = "master_data.parquet"
-
-HF_OUTPUT_REPO = "P2SAMAPA/p2-etf-vine-copula-results"
+HF_OUTPUT_REPO = "P2SAMAPA/p2-etf-t-copula-results"
 
 # --- Universe Definitions ---
 FI_COMMODITIES_TICKERS = ["TLT", "VCIT", "LQD", "HYG", "VNQ", "GLD", "SLV"]
@@ -26,16 +25,26 @@ UNIVERSES = {
     "COMBINED": ALL_TICKERS
 }
 
-# --- Vine Copula Parameters ---
-LOOKBACK_WINDOW = 504                 # Days of returns to fit copula
-N_SIMULATIONS = 10000                 # Number of Monte Carlo scenarios
-MARGIN_MODEL = "empirical"            # "empirical" or "skewt"
-VINE_STRUCTURE = "rvine"              # R-vine structure selection (automatic)
-TAIL_ADJUSTMENT_LAMBDA = 0.1          # Weight for tail risk in combined score (0 = pure expected return)
-MIN_OBSERVATIONS = 252                # Minimum observations required
+# --- Macro Columns ---
+MACRO_COLS = ["VIX", "DXY", "T10Y2Y", "TBILL_3M"]
+
+# --- Copula Parameters ---
+DAILY_LOOKBACK = 504               # Days for daily training
+GLOBAL_TRAIN_START = "2008-01-01"  # Global training start
+ROLLING_WINDOW = 252               # Window for correlation estimation
+
+# --- Simulation ---
+N_SIMULATIONS = 50000              # Number of Monte Carlo draws
+TAIL_ADJUSTMENT_LAMBDA = 1.0       # Weight for ES95 penalty (increased for differentiation)
+RISK_FREE_RATE_ANNUAL = 0.02       # Annual risk‑free rate
+
+# --- Conditional Expected Return ---
+MOMENTUM_WINDOW = 21               # Days for forward‑looking return signal
+MIN_OBSERVATIONS = 252             # Minimum data required
+GLOBAL_MIN_OBSERVATIONS = 1008     # Minimum for global training
 
 # --- Shrinking Windows ---
-SHRINKING_WINDOW_START_YEARS = list(range(2010, 2025))
+SHRINKING_WINDOW_START_YEARS = list(range(2008, 2025))
 
 # --- Date Handling ---
 TODAY = datetime.now().strftime("%Y-%m-%d")
