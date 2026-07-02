@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
-import config  # <-- added this line
+import config
 
 def vine_copula_score(returns, macro_df):
     """
@@ -49,7 +49,11 @@ def vine_copula_score(returns, macro_df):
             elif fam == "frank":
                 families.append(pv.BicopFamily.frank)
         # Fit vine with automatic family selection
-        vine = pv.Vinecop(u, family_set=families, selection_criterion='aic')
+        d = u.shape[1]
+        vine = pv.Vinecop(d)  # Correct constructor: pass dimension
+        # Set family set and selection criterion
+        vine.family_set = families
+        vine.selection_criterion = 'aic'
         vine.fit(u)
         # Compute conditional quantile for each ETF given macro state
         scores = {}
