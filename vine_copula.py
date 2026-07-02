@@ -48,12 +48,9 @@ def vine_copula_score(returns, macro_df):
                 families.append(pv.BicopFamily.joe)
             elif fam == "frank":
                 families.append(pv.BicopFamily.frank)
-        # Fit vine with automatic family selection
+        # Fit vine with automatic family selection - pass arguments to constructor
         d = u.shape[1]
-        vine = pv.Vinecop(d)  # Correct constructor: pass dimension
-        # Set family set and selection criterion
-        vine.family_set = families
-        vine.selection_criterion = 'aic'
+        vine = pv.Vinecop(d, family_set=families, selection_criterion='aic')
         vine.fit(u)
         # Compute conditional quantile for each ETF given macro state
         scores = {}
