@@ -32,8 +32,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 style="text-align: center;">📊 Vine Copula Decomposition</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center;">R‑vine copula | AIC‑selected bivariate families | Conditional quantile given macro</p>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align: center;">📊 Vine Copula Decomposition with Momentum</h1>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center;">R‑vine copula | AIC‑selected bivariate families | Conditional quantile × Momentum</p>', unsafe_allow_html=True)
 
 st.sidebar.markdown("## 🧮 Vine Copula")
 if st.sidebar.button("🔄 Refresh Data", use_container_width=True, type="primary"):
@@ -43,6 +43,7 @@ if st.sidebar.button("🔄 Refresh Data", use_container_width=True, type="primar
 st.sidebar.markdown(f"**Run Date:** `{st.session_state.get('run_date', 'Not loaded')}`")
 st.sidebar.markdown(f"**Next Trading Day:** `{next_trading_day()}`")
 st.sidebar.markdown(f"**Copula families:** {', '.join(config.COPULA_FAMILIES)}")
+st.sidebar.markdown(f"**Score = Vine × (1 + Momentum)**")
 
 OUTPUT_REPO = config.OUTPUT_REPO
 HF_TOKEN = config.HF_TOKEN
@@ -97,7 +98,7 @@ def display_universe(universe_name, uni_data, window_data, window_label):
             st.markdown(f"""
             <div class="hero-card">
                 <h3>{etf['ticker']}</h3>
-                <p>Conditional score: {etf['vine_score_norm']:.3f}</p>
+                <p>Vine×Momentum: {etf['vine_score_norm']:.3f}</p>
                 <p style="font-size:0.9rem;">raw: {etf['raw_score']:.4f}</p>
             </div>
             """, unsafe_allow_html=True)
@@ -110,13 +111,15 @@ def display_universe(universe_name, uni_data, window_data, window_label):
 tab1, tab2 = st.tabs(["📊 Best Window (Auto)", "🔍 Choose Window (Manual)"])
 
 with tab1:
-    st.header("📊 Top ETFs by Vine Copula Conditional Score (Auto Best Window)")
+    st.header("📊 Top ETFs by Vine Copula × Momentum (Auto Best Window)")
     with st.expander("📖 Interpretation", expanded=False):
         st.markdown("""
         - **R‑vine copula** decomposes multivariate dependence into a hierarchy of bivariate copulas.
         - For each pair, the optimal copula family (Gaussian, Clayton, Gumbel, Joe, Frank) is selected by AIC.
-        - The score is the **conditional quantile** of each ETF given the macro state under the fitted vine.
-        - High score → ETF has strong asymmetric tail dependence with the rest of the universe under current macro.
+        - The vine score measures asymmetric tail dependence strength under the current macro state.
+        - **Momentum factor** = 1 + last_return (clipped to 0.5–2.0).
+        - **Final score = vine_score × momentum** – up‑weights structurally important ETFs that are also trending upward.
+        - High score → strong tail dependence + positive momentum → potential alpha.
         """)
     for universe_name, uni_data in data["universes"].items():
         if not uni_data or not uni_data.get("all_windows"):
@@ -149,4 +152,4 @@ with tab2:
             st.warning("No data for selected window.")
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Vine Copula Decomposition | R‑vine with AIC‑selected families")
+st.sidebar.caption("Vine Copula × Momentum | Tail dependence with return enhancement")
