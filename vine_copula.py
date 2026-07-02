@@ -6,6 +6,7 @@ warnings.filterwarnings("ignore")
 def vine_copula_score(returns, macro_df):
     """
     Fit R‑vine copula to ETF returns and compute conditional quantile for each ETF.
+    Multiply by momentum factor (1 + last_return) to enhance return potential.
     """
     if len(returns) < 20 or macro_df is None or len(macro_df) < 20:
         return {ticker: 0.0 for ticker in returns.columns}
@@ -50,26 +51,13 @@ def vine_copula_score(returns, macro_df):
         vine = pv.Vinecop(u, family_set=families, selection_criterion='aic')
         vine.fit(u)
         # Compute conditional quantile for each ETF given macro state
-        # For each ETF, we use the macro factor as a conditioning variable
-        # Simpler: compute the conditional mean of the vine distribution for each ETF
-        # For each ETF, we can extract the marginal conditional quantile
-        # We'll use the vine's conditional distribution function
         scores = {}
         tickers = returns.columns
-        # For each ETF, compute the expected value under the vine distribution
-        # conditioned on the last macro factor
-        # This is a simplified approach: we use the marginal mean
-        # In practice, we would use the vine to sample conditional on macro
-        # But pyvinecopulib doesn't directly support conditioning on macro
-        # So we compute the average pair copula strength for each ETF
-        # as a proxy for its conditional dependence
         n = len(tickers)
         pair_strength = np.zeros(n)
         # Get the vine structure and pair copulas
         for i in range(n):
-            # Sum of absolute Kendall's tau for pairs involving ETF i
             tau_sum = 0.0
-            # Extract pair copulas from vine
             for tree in vine.trees:
                 for edge in tree:
                     if edge.get_var_names() is not None:
@@ -80,15 +68,24 @@ def vine_copula_score(returns, macro_df):
         # Normalise pair_strength
         if pair_strength.max() > 0:
             pair_strength = pair_strength / pair_strength.max()
-        # Combine with macro factor to get conditional quantile
+        # Get last returns for momentum
+        last_returns = returns.iloc[-1].values
+        # Combine: score = vine_score × (1 + momentum)
         for i, ticker in enumerate(tickers):
-            # Higher macro factor increases the conditional quantile
-            # We use pair_strength as a weight
-            score = pair_strength[i] * (0.5 + macro_factor[-1] * 0.5)
-            scores[ticker] = float(score)
+            vine_score = pair_strength[i] * (0.5 + macro_factor[-1] * 0.5)
+            # Momentum factor: 1 + last_return (clipped to [0.5, 2.0] to avoid extremes)
+            momentum = 1.0 + last_returns[i]
+            momentum = max(0.5, min(2.0, momentum))
+            scores[ticker] = float(vine_score * momentum)
         return scores
     except Exception as e:
         print(f"Vine fitting failed: {e}")
         # Fallback: use pair correlations as scores
         corr = returns.corr().abs().mean(axis=1)
-        return {ticker: float(corr[i]) for i, ticker in enumerate(returns.columns)}
+        last_returns = returns.iloc[-1].values
+        scores = {}
+        for i, ticker in enumerate(returns.columns):
+            momentum = 1.0 + last_returns[i]
+            momentum = max(0.5, min(2.0, momentum))
+            scores[ticker] = float(corr.iloc[i] * momentum)
+        return scores
