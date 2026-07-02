@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
+import config  # <-- added this line
 
 def vine_copula_score(returns, macro_df):
     """
