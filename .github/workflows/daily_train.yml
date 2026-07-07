@@ -2,7 +2,7 @@ name: Daily Vine Copula Training
 
 on:
   schedule:
-    - cron: '50 01 * * *'
+    - cron: '50 00 * * *'
   workflow_dispatch:
 
 jobs:
